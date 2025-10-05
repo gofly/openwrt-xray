@@ -1,0 +1,10 @@
+config rules
+	option local_port '65535'
+	option wan_fw4_list '/usr/share/xray/wan_fw4_list.txt'
+	option wan_fw6_list '/usr/share/xray/wan_fw6_list.txt'
+	option wan_bp4_list '/usr/share/xray/wan_bp4_list.txt'
+	option wan_bp6_list '/usr/share/xray/wan_bp6_list.txt'
+	list lan_ifaces 'br-lan'
+	list wan_fw_ports '80'
+	list wan_fw_ports '443'
+	list lan_fw_mac '00:00:00:00:00:00'

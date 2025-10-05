@@ -1,0 +1,62 @@
+{
+  "log": {
+    "loglevel": "none",
+    "access": "/var/log/xray.access.log",
+    "error": "/var/log/xray.error.log"
+  },
+  "inbounds": [
+    {
+      "port": 65535,
+      "listen": "0.0.0.0",
+      "protocol": "dokodemo-door",
+      "settings": {
+        "network": "tcp,udp",
+        "followRedirect": true
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": [
+          "http",
+          "tls"
+        ]
+      },
+      "streamSettings": {
+        "sockopt": {
+          "tproxy": "tproxy"
+        }
+      },
+      "tag": "tproxy-inbound"
+    }
+  ],
+  "outbounds": [
+    {
+      "protocol": "freedom",
+      "settings": {},
+      "streamSettings": {
+        "sockopt": {
+          "mark": 255
+        }
+      },
+      "tag": "direct-outbound"
+    }
+  ],
+  "dns": {
+    "servers": [
+      "114.114.114.114"
+    ],
+    "tag": "dns-inbound"
+  },
+  "routing": {
+    "domainStrategy": "AsIs",
+    "rules": [
+      {
+        "type": "field",
+        "network": "tcp,udp",
+        "inboundTag": [
+          "tproxy-inbound"
+        ],
+        "outboundTag": "direct-outbound"
+      }
+    ]
+  }
+}

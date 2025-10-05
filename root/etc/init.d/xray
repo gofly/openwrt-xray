@@ -1,0 +1,80 @@
+#!/bin/sh /etc/rc.common
+
+START=99
+STOP=15
+USE_PROCD=1
+
+PROG=/usr/bin/xray
+NAME="xray"
+CONFDIR=/etc/xray
+PIDFILE=/var/run/xray.pid
+
+check_config() {
+	$PROG -confdir $CONFDIR -test 2>&1 | grep -E 'Failed'
+	return $?
+}
+
+start_xray() {
+	procd_open_instance
+	procd_set_param command "$PROG" -confdir "$CONFDIR"
+	procd_set_param respawn 1200 5 10
+	procd_set_param limits nofile="4096 4096"
+	procd_append_param limits core="0 0"
+	procd_set_param pidfile "$PIDFILE"
+	procd_close_instance
+}
+
+uci_get_by_type() {
+	local ret=$(uci get $NAME.@$1[0].$2 2>/dev/null)
+	echo ${ret:=$3}
+}
+
+start_rules() {
+	local local_port=$(uci_get_by_type rules local_port 65535)
+	local wan_fw4_list=$(uci_get_by_type rules wan_fw4_list)
+	local wan_fw6_list=$(uci_get_by_type rules wan_fw6_list)
+	local wan_bp4_list=$(uci_get_by_type rules wan_bp4_list)
+	local wan_bp6_list=$(uci_get_by_type rules wan_bp6_list)
+	local wan_fw_ports=$(uci_get_by_type rules wan_fw_ports)
+	local lan_fw_mac=$(uci_get_by_type rules lan_fw_mac)
+	local lan_ifaces=$(uci_get_by_type rules lan_ifaces)
+
+	/usr/bin/xray-rules \
+		-l "$local_port" \
+		-w "$wan_fw4_list" \
+		-W "$wan_fw6_list" \
+		-b "$wan_bp4_list" \
+		-B "$wan_bp6_list" \
+		-p "$wan_fw_ports" \
+		-m "$lan_fw_mac" \
+		-i "$lan_ifaces" || \
+	/usr/bin/xray-rules -f
+}
+
+flush_rules() {
+	/usr/bin/xray-rules -f
+}
+
+start_service() {
+	config_load $NAME
+	start_xray
+	start_rules
+}
+
+stop_service() {
+	flush_rules
+}
+
+restart() {
+	check_config && exit 1
+	echo "restarting..."
+	stop
+	start
+	echo "restarted"
+}
+
+reload_service() {
+	config_load $NAME
+	flush_rules
+	start_rules
+}
